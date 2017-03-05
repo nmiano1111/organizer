@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "td8jXeoPF3qVAa7pHijI3xajMWM=",
+			"path": "github.com/rwcarlsen/goexif",
+			"revision": "41dad3aa083329f3f672b7095a9ea8a0c384bbe8",
+			"revisionTime": "2014-12-22T21:16:34Z"
+		},
+		{
+			"checksumSHA1": "A/Zl7n+NZrzHDK7sdJG0xL2S/FE=",
+			"path": "github.com/rwcarlsen/goexif/exif",
+			"revision": "41dad3aa083329f3f672b7095a9ea8a0c384bbe8",
+			"revisionTime": "2014-12-22T21:16:34Z"
+		},
+		{
+			"checksumSHA1": "bBmKkRYPKiGH8ZbLZH8LOY6xmxQ=",
+			"path": "github.com/rwcarlsen/goexif/tiff",
+			"revision": "41dad3aa083329f3f672b7095a9ea8a0c384bbe8",
+			"revisionTime": "2014-12-22T21:16:34Z"
+		}
+	],
+	"rootPath": "github.com/nmiano1111/organizer"
+}

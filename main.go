@@ -19,7 +19,9 @@ type Location struct {
 
 func main() {
 	var path = flag.String("path", ".", "path to directory")
+	var flatten = flag.Bool("flatten", false, "flatten nested directories")
 	flag.Parse()
+
 	files, err := ioutil.ReadDir(*path)
 
 	if err != nil {
@@ -27,6 +29,42 @@ func main() {
 		return
 	}
 
+	if *flatten {
+		fmt.Println("flatten!")
+		Flatten(path, path, files)
+	} else {
+		fmt.Println("organize!")
+		Organize(path, files)
+	}
+}
+
+func Flatten(currPath *string, finalPath *string, files []os.FileInfo) {
+	// must be singlethreaded per openstreetmap rate limit
+	for _, f := range files {
+		dir := fmt.Sprint(*currPath, "/", f.Name())
+		fi, err := os.Stat(dir)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			fmt.Println("-+-+-+-+-")
+			fmt.Println(dir)
+			subFiles, err := ioutil.ReadDir(dir)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			//flattenDirs(path, f.Name())
+			Flatten(&dir, finalPath, subFiles)
+		default:
+			flattenDirs(&dir, finalPath, f.Name())
+		}
+	}
+
+}
+func Organize(path *string, files []os.FileInfo) {
 	// must be singlethreaded per openstreetmap rate limit
 	for _, f := range files {
 		pic := fmt.Sprint(*path, "/", f.Name())
@@ -55,6 +93,13 @@ func main() {
 
 		// to prevent exceeding openstreetmap rate limit :-|
 		time.Sleep(time.Second)
+	}
+}
+
+func flattenDirs(currPath *string, destinationPath *string, fName string) {
+	err := os.Rename(*currPath, fmt.Sprint(*destinationPath, "/", fName))
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 }
 

@@ -20,6 +20,9 @@ type Location struct {
 func main() {
 	var path = flag.String("path", ".", "path to directory")
 	var flatten = flag.Bool("flatten", false, "flatten nested directories")
+	var byLocation = flag.Bool("byLocation", true, "organize by location")
+	var byDevice = flag.Bool("byDevice", true, "organize by device")
+
 	flag.Parse()
 
 	files, err := ioutil.ReadDir(*path)
@@ -30,16 +33,24 @@ func main() {
 	}
 
 	if *flatten {
-		fmt.Println("flatten!")
+		fmt.Println("flattening!")
 		Flatten(path, path, files)
-	} else {
-		fmt.Println("organize!")
-		Organize(path, files)
+	} else if *byLocation && !*byDevice {
+		fmt.Println("organizing by location!")
+		ByLocation(path, files)
+	} else if *byDevice && !*byLocation {
+		fmt.Println("organizing by device!")
+		ByDevice(path, files)
+	} else if *byLocation && *byDevice {
+		fmt.Println("organizing by location and device!")
+		fmt.Println("location...")
+		ByLocation(path, files)
+		fmt.Println("device...")
+		ByDevice(path, files)
 	}
 }
 
 func Flatten(currPath *string, finalPath *string, files []os.FileInfo) {
-	// must be singlethreaded per openstreetmap rate limit
 	for _, f := range files {
 		dir := fmt.Sprint(*currPath, "/", f.Name())
 		fi, err := os.Stat(dir)
@@ -56,15 +67,71 @@ func Flatten(currPath *string, finalPath *string, files []os.FileInfo) {
 				fmt.Println(err.Error())
 				return
 			}
-			//flattenDirs(path, f.Name())
 			Flatten(&dir, finalPath, subFiles)
 		default:
-			flattenDirs(&dir, finalPath, f.Name())
+			moveFile(&dir, finalPath, f.Name())
 		}
 	}
 
 }
-func Organize(path *string, files []os.FileInfo) {
+
+func ByDevice(currPath *string, files []os.FileInfo) {
+	for _, f := range files {
+		dir := fmt.Sprint(*currPath, "/", f.Name())
+		fi, err := os.Stat(dir)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			fmt.Println("-+-+-+-+-")
+			fmt.Println(dir)
+			subFiles, err := ioutil.ReadDir(dir)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			ByDevice(&dir, subFiles)
+		case mode.IsRegular():
+			filePath := fmt.Sprintf("%s/%s", *currPath, f.Name())
+			fmt.Println(filePath)
+			file, err := os.Open(filePath)
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+			x, err := exif.Decode(file)
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+			device, err := x.Get(exif.Model)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			tag, err := device.StringVal()
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+
+			finalPath := fmt.Sprintf("%s/%s", *currPath, tag)
+			if _, err := os.Stat(finalPath); os.IsNotExist(err) {
+				os.Mkdir(finalPath, 0755)
+			}
+			err = os.Rename(dir, fmt.Sprint(finalPath, "/", f.Name()))
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+		}
+	}
+
+}
+
+func ByLocation(path *string, files []os.FileInfo) {
 	// must be singlethreaded per openstreetmap rate limit
 	for _, f := range files {
 		pic := fmt.Sprint(*path, "/", f.Name())
@@ -96,7 +163,8 @@ func Organize(path *string, files []os.FileInfo) {
 	}
 }
 
-func flattenDirs(currPath *string, destinationPath *string, fName string) {
+//janky
+func moveFile(currPath *string, destinationPath *string, fName string) {
 	err := os.Rename(*currPath, fmt.Sprint(*destinationPath, "/", fName))
 	if err != nil {
 		fmt.Println(err.Error())
